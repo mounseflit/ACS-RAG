@@ -4,7 +4,7 @@ import os
 import json
 import tempfile
 import chromadb
-from file_processor import process_file
+from file_processor_cloud import process_file
 
 from ibm_watsonx_ai import Credentials
 from ibm_watsonx_ai.foundation_models import ModelInference
@@ -88,32 +88,6 @@ with st.sidebar:
     model_provider = st.selectbox("Model Provider", options=list(current_options.keys()))
     model_id = st.selectbox("Model ID *", options=current_options.get(model_provider, []))
 
-
-
-# Function to generate embeddings using Watsonx AI
-def generate_embeddings(texts, api_key, project_id, url):
-    try:
-        credentials = Credentials(url=url, api_key=api_key)
-        
-        # For now, we'll use a simple text-based similarity
-        # since Watsonx AI's embedding API is not directly available in this context.
-        # we will simulate the embedding generation.
-        # In a production system, you would use Watsonx AI's embedding API
-        # This is a placeholder implementation
-        # Generate embeddings for each text
-        # Here we use a simple hash-based embedding for demonstration purposes
-        # In practice, you would call the embedding model API
-        # and return the actual embeddings
-
-        embeddings = []
-        for text in texts:
-            # Simple hash-based embedding (placeholder)
-            embedding = [hash(text[i:i+10]) % 1000 for i in range(0, min(len(text), 100), 10)]
-            embeddings.append(embedding)
-        return embeddings
-    except Exception as e:
-        st.error(f"Error generating embeddings: {e}")
-        return None
 
 # File upload section
 st.header("📁 Upload Files")
@@ -295,4 +269,3 @@ if st.button("🗑️ Clear Processed Files"):
     except:
         pass
     st.rerun()
-
