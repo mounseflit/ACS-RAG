@@ -13,7 +13,7 @@ except ImportError:
     pass
 
 import chromadb
-from file_processor_cloud import process_file
+from file_processor import process_file
 
 from ibm_watsonx_ai import Credentials
 from ibm_watsonx_ai.foundation_models import ModelInference
