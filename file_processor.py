@@ -1,178 +1,212 @@
-import pypdf
-import docx
-import pandas as pd
-import io
-from PIL import Image
-import pytesseract
-from pdf2image import convert_from_path
-# from ibm_watson import SpeechToTextV1
-from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 import os
+import tempfile
+import shutil
+from typing import List, Dict, Any, Optional
 
-def extract_text_from_pdf(file_path):
-    text = ""
-    with open(file_path, "rb") as f:
-        reader = pypdf.PdfReader(f)
-        for page_num in range(len(reader.pages)):
-            text += reader.pages[page_num].extract_text() or ""
-    return text
+# Text processing
+import pypdf
+from docx import Document
+import pandas as pd
 
-def extract_text_from_docx(file_path):
-    doc = docx.Document(file_path)
-    text = []
-    for paragraph in doc.paragraphs:
-        text.append(paragraph.text)
-    return "\n".join(text)
+# OCR and image processing
+try:
+    import pytesseract
+    from PIL import Image
+    OCR_AVAILABLE = True
+except ImportError:
+    OCR_AVAILABLE = False
 
-def extract_text_from_xlsx(file_path):
-    xls = pd.ExcelFile(file_path)
-    text = []
-    for sheet_name in xls.sheet_names:
-        df = xls.parse(sheet_name)
-        text.append(f"Sheet: {sheet_name}\n")
-        text.append(df.to_string())
-    return "\n".join(text)
+# PDF to image conversion
+try:
+    from pdf2image import convert_from_path
+    PDF2IMAGE_AVAILABLE = True
+except ImportError:
+    PDF2IMAGE_AVAILABLE = False
 
-def extract_text_from_image(image_path):
-    try:
-        return pytesseract.image_to_string(Image.open(image_path))
-    except Exception as e:
-        return f"Error during OCR: {e}"
 
-def process_scanned_pdf(file_path):
-    text = ""
-    images = convert_from_path(file_path)
-    for i, image in enumerate(images):
-        text += f"\n--- Page {i+1} ---\n"
-        text += pytesseract.image_to_string(image)
-    return text
-
-# def transcribe_audio(audio_path, api_key, service_url):
-#     try:
-#         authenticator = IAMAuthenticator(api_key)
-#         speech_to_text = SpeechToTextV1(
-#             authenticator=authenticator
-#         )
-#         speech_to_text.set_service_url(service_url)
-
-#         with open(audio_path, 'rb') as audio_file:
-#             speech_recognition_results = speech_to_text.recognize(
-#                 audio=audio_file,
-#                 content_type='audio/wav',
-#                 model='en-US_BroadbandModel',
-#                 continuous=True
-#             ).get_result()
-        
-#         text = ""
-#         for result in speech_recognition_results["results"]:
-#             text += result["alternatives"][0]["transcript"]
-#         return text
-
-#     except Exception as e:
-#         return f"Error during audio transcription: {e}"
-
-def chunk_text(text, chunk_size=500, overlap=50):
-    chunks = []
+def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str]:
+    """Split text into overlapping chunks."""
+    if not text or len(text.strip()) == 0:
+        return []
+    
     words = text.split()
-    i = 0
-    while i < len(words):
-        chunk = " ".join(words[i:i + chunk_size])
-        chunks.append(chunk)
-        i += chunk_size - overlap
+    if len(words) <= chunk_size:
+        return [text]
+    
+    chunks = []
+    start = 0
+    
+    while start < len(words):
+        end = start + chunk_size
+        chunk_words = words[start:end]
+        chunk_text = ' '.join(chunk_words)
+        chunks.append(chunk_text)
+        
+        if end >= len(words):
+            break
+            
+        start = end - overlap
+    
     return chunks
 
-def process_file(file_path, file_type, watson_stt_api_key=None, watson_stt_service_url=None):
-    content = ""
-    if file_type == "pdf":
-        text = extract_text_from_pdf(file_path)
-        if len(text.strip()) < 100: # Arbitrary threshold for sparse text, indicating scanned PDF
-            content = process_scanned_pdf(file_path)
-        else:
-            content = text
-    elif file_type == "docx":
-        content = extract_text_from_docx(file_path)
-    elif file_type == "xlsx":
-        content = extract_text_from_xlsx(file_path)
-    elif file_type == "txt":
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
-    elif file_type == "image":
-        content = extract_text_from_image(file_path)
-    # elif file_type == "audio":
-    #     if watson_stt_api_key and watson_stt_service_url:
-    #         content = transcribe_audio(file_path, watson_stt_api_key, watson_stt_service_url)
-    #     else:
-    #         content = "Audio processing requires Watson Speech to Text API key and service URL."
-    else:
-        return [] # Return empty list for unsupported types
+def process_text_file(file_path: str) -> str:
+    """Process plain text files."""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            return file.read()
+    except UnicodeDecodeError:
+        # Try with different encoding
+        with open(file_path, 'r', encoding='latin-1') as file:
+            return file.read()
 
-    if content:
-        chunks = chunk_text(content)
-        processed_data = []
-        for i, chunk in enumerate(chunks):
-            processed_data.append({
-                "content": chunk,
-                "metadata": {
-                    "file_name": os.path.basename(file_path),
-                    "file_type": file_type,
-                    "chunk_id": i
-                }
-            })
-        return processed_data
-    return []
-
-
-# if __name__ == "__main__":
-#     # Example Usage (create dummy files for testing)
-#     with open("test.txt", "w") as f:
-#         f.write("This is a test text file. This file contains multiple sentences to demonstrate chunking. Let's see how it works with a longer text.")
+def process_pdf_file(file_path: str) -> str:
+    """Process PDF files with fallback to OCR for scanned documents."""
+    text = ""
     
-#     doc = docx.Document()
-#     doc.add_paragraph("This is a test docx file. It also has some content for chunking.")
-#     doc.save("test.docx")
+    try:
+        # First, try to extract text directly
+        with open(file_path, 'rb') as file:
+            pdf_reader = pypdf.PdfReader(file)
+            for page in pdf_reader.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
+        
+        # If we got very little text, it might be a scanned PDF
+        if len(text.strip()) < 100 and PDF2IMAGE_AVAILABLE and OCR_AVAILABLE:
+            print("Low text content detected, attempting OCR...")
+            try:
+                # Convert PDF to images
+                images = convert_from_path(file_path)
+                ocr_text = ""
+                
+                for i, image in enumerate(images):
+                    # Save image temporarily
+                    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_img:
+                        image.save(tmp_img.name, 'PNG')
+                        
+                        # Perform OCR
+                        page_text = pytesseract.image_to_string(Image.open(tmp_img.name))
+                        ocr_text += f"Page {i+1}:\n{page_text}\n\n"
+                        
+                        # Clean up
+                        os.unlink(tmp_img.name)
+                
+                if len(ocr_text.strip()) > len(text.strip()):
+                    text = ocr_text
+                    print("OCR extraction successful")
+                    
+            except Exception as e:
+                print(f"OCR failed: {e}")
+                
+    except Exception as e:
+        print(f"PDF processing error: {e}")
+        return ""
+    
+    return text
 
-#     df = pd.DataFrame({
-#         'col1': [1, 2, 3, 4, 5],
-#         'col2': [6, 7, 8, 9, 10]
-#     })
-#     df.to_excel("test.xlsx", index=False)
+def process_docx_file(file_path: str) -> str:
+    """Process DOCX files."""
+    try:
+        doc = Document(file_path)
+        text = ""
+        for paragraph in doc.paragraphs:
+            text += paragraph.text + "\n"
+        return text
+    except Exception as e:
+        print(f"DOCX processing error: {e}")
+        return ""
 
-#     # Create a dummy PDF file (requires reportlab)
-#     from reportlab.pdfgen import canvas
-#     c = canvas.Canvas("test.pdf")
-#     c.drawString(100, 750, "This is a test PDF file. This is the first sentence. This is the second sentence. This is the third sentence.")
-#     c.save()
+def process_excel_file(file_path: str) -> str:
+    """Process Excel files."""
+    try:
+        # Read all sheets
+        excel_file = pd.ExcelFile(file_path)
+        all_text = ""
+        
+        for sheet_name in excel_file.sheet_names:
+            df = pd.read_excel(file_path, sheet_name=sheet_name)
+            
+            # Convert DataFrame to text
+            sheet_text = f"Sheet: {sheet_name}\n"
+            sheet_text += df.to_string(index=False)
+            sheet_text += "\n\n"
+            
+            all_text += sheet_text
+        
+        return all_text
+    except Exception as e:
+        print(f"Excel processing error: {e}")
+        return ""
 
-#     # Create a dummy image file for OCR testing
-#     from PIL import Image, ImageDraw, ImageFont
-#     img = Image.new('RGB', (200, 50), color = (255, 255, 255))
-#     d = ImageDraw.Draw(img)
-#     d.text((10,10), "Hello OCR! This is a test image for OCR.", fill=(0,0,0))
-#     img.save("test_ocr.png")
+def process_image_file(file_path: str) -> str:
+    """Process image files using OCR."""
+    if not OCR_AVAILABLE:
+        return "OCR not available - pytesseract not installed"
+    
+    try:
+        image = Image.open(file_path)
+        text = pytesseract.image_to_string(image)
+        return text
+    except Exception as e:
+        print(f"Image OCR error: {e}")
+        return ""
 
-#     # Create a dummy audio file (requires pydub and audiogen, but we'll just create a dummy file for now)
-#     # For actual testing, a real .wav file would be needed.
-#     with open("dummy_audio.wav", "w") as f:
-#         f.write("This is a dummy audio file content.")
 
-#     print("\n--- Processing test.txt ---")
-#     print(process_file("test.txt", "txt"))
+def process_file(file_path: str, file_type: str) -> List[Dict[str, Any]]:
+    """
+    Process a file and return structured data for RAG.
+    
+    Args:
+        file_path: Path to the file
+        file_type: Type of file ('txt', 'pdf', 'docx', 'xlsx', 'image')
+    
+    Returns:
+        List of dictionaries containing processed content and metadata
+    """
+    
+    # Extract text based on file type
+    if file_type == 'txt':
+        text = process_text_file(file_path)
+    elif file_type == 'pdf':
+        text = process_pdf_file(file_path)
+    elif file_type == 'docx':
+        text = process_docx_file(file_path)
+    elif file_type == 'xlsx':
+        text = process_excel_file(file_path)
+    elif file_type == 'image':
+        text = process_image_file(file_path)
+    else:
+        raise ValueError(f"Unsupported file type: {file_type}")
+    
+    if not text or len(text.strip()) == 0:
+        return []
+    
+    # Chunk the text
+    chunks = chunk_text(text)
+    
+    # Create structured data
+    processed_data = []
+    file_name = os.path.basename(file_path)
+    
+    for i, chunk in enumerate(chunks):
+        if chunk.strip():  # Only include non-empty chunks
+            item = {
+                "content": chunk.strip(),
+                "metadata": {
+                    "file_name": file_name,
+                    "file_type": file_type,
+                    "chunk_id": i,
+                    "total_chunks": len(chunks),
+                    "char_count": len(chunk),
+                    "word_count": len(chunk.split())
+                }
+            }
+            processed_data.append(item)
+    
+    return processed_data
 
-#     print("\n--- Processing test.docx ---")
-#     print(process_file("test.docx", "docx"))
 
-#     print("\n--- Processing test.xlsx ---")
-#     print(process_file("test.xlsx", "xlsx"))
-
-#     print("\n--- Processing test.pdf ---")
-#     print(process_file("test.pdf", "pdf"))
-
-#     print("\n--- Processing test_ocr.png ---")
-#     print(process_file("test_ocr.png", "image"))
-
-#     print("\n--- Processing dummy_audio.wav (placeholder) ---")
-#     # To test audio, replace None with actual API key and URL
-#     print(process_file("dummy_audio.wav", "audio", watson_stt_api_key=None, watson_stt_service_url=None))
 
 
 
