@@ -11,3 +11,4 @@ Pillow>=10.0.0
 pdf2image<=1.17.0
 reportlab>=4.0.0
 streamlit-extras>=0.7.5
+sqlite3>=3.35.0
