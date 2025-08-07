@@ -194,7 +194,7 @@ if uploaded_files:
                 os.unlink(tmp_file_path)
                 
 
-## Display processed files summary
+# # Display processed files summary
 # if st.session_state.processed_files:
 #     st.subheader("📊 Processed Files Summary")
 #     file_summary = {}
@@ -287,10 +287,10 @@ if user_input:
 
 
 
-# Add info about the vector store
-with st.sidebar:
-    st.subheader("ℹ️ System Info")
-    # st.info("Using ChromaDB with sqlite3 compatibility fix")
-    if st.session_state.processed_files:
-        total_chunks = len(st.session_state.processed_files)
-        st.write(f"📊 Total indexed chunks: {total_chunks}")
+# # Add info about the vector store
+# with st.sidebar:
+#     st.subheader("ℹ️ System Info")
+#     # st.info("Using ChromaDB with sqlite3 compatibility fix")
+#     if st.session_state.processed_files:
+#         total_chunks = len(st.session_state.processed_files)
+#         st.write(f"📊 Total indexed chunks: {total_chunks}")
