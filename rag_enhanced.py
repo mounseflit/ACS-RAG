@@ -179,18 +179,6 @@ if uploaded_files:
     # after processing, say that files are ready to go
     st.success("✅ All files processed successfully! 🎉")
 
-    
-    # Clear processed files button
-    if st.button("🗑️ Clear Processed Files"):
-        st.session_state.processed_files = []
-        # Clear ChromaDB collection
-        try:
-            client.delete_collection(name="documents")
-            client.create_collection(name="documents")
-            collection = client.get_collection(name="documents")
-        except:
-            pass
-        st.rerun()
 
     # Clear chat button
     if st.button("🗑️ Clear Chat History"):
