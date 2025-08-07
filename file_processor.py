@@ -19,9 +19,11 @@ except ImportError:
 # PDF to image conversion
 try:
     from pdf2image import convert_from_path
+    from PIL import ImageEnhance
     PDF2IMAGE_AVAILABLE = True
 except ImportError:
     PDF2IMAGE_AVAILABLE = False
+
 
 
 def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str]:
@@ -49,6 +51,7 @@ def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str]
     
     return chunks
 
+
 def process_text_file(file_path: str) -> str:
     """Process plain text files."""
     try:
@@ -58,6 +61,54 @@ def process_text_file(file_path: str) -> str:
         # Try with different encoding
         with open(file_path, 'r', encoding='latin-1') as file:
             return file.read()
+
+
+# def process_pdf_file(file_path: str) -> str:
+#     """Process PDF files with fallback to OCR for scanned documents."""
+#     text = ""
+    
+#     try:
+#         # First, try to extract text directly
+#         with open(file_path, 'rb') as file:
+#             pdf_reader = pypdf.PdfReader(file)
+#             for page in pdf_reader.pages:
+#                 page_text = page.extract_text()
+#                 if page_text:
+#                     text += page_text + "\n"
+        
+#         # If we got very little text, it might be a scanned PDF
+#         if len(text.strip()) < 100 and PDF2IMAGE_AVAILABLE and OCR_AVAILABLE:
+#             print("Low text content detected, attempting OCR...")
+#             try:
+#                 # Convert PDF to images
+#                 images = convert_from_path(file_path)
+#                 ocr_text = ""
+                
+#                 for i, image in enumerate(images):
+#                     # Save image temporarily
+#                     with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_img:
+#                         image.save(tmp_img.name, 'PNG')
+                        
+#                         # Perform OCR
+#                         page_text = pytesseract.image_to_string(Image.open(tmp_img.name))
+#                         ocr_text += f"Page {i+1}:\n{page_text}\n\n"
+                        
+#                         # Clean up
+#                         os.unlink(tmp_img.name)
+                
+#                 if len(ocr_text.strip()) > len(text.strip()):
+#                     text = ocr_text
+#                     print("OCR extraction successful")
+                    
+#             except Exception as e:
+#                 print(f"OCR failed: {e}")
+                
+#     except Exception as e:
+#         print(f"PDF processing error: {e}")
+#         return ""
+    
+#     return text
+
 
 def process_pdf_file(file_path: str) -> str:
     """Process PDF files with fallback to OCR for scanned documents."""
@@ -72,38 +123,56 @@ def process_pdf_file(file_path: str) -> str:
                 if page_text:
                     text += page_text + "\n"
         
-        # If we got very little text, it might be a scanned PDF
-        if len(text.strip()) < 100 and PDF2IMAGE_AVAILABLE and OCR_AVAILABLE:
-            print("Low text content detected, attempting OCR...")
+        # If we got little text or PDF seems to be scanned, try OCR
+        if (len(text.strip()) < 200 or text.count(' ') < 50) and PDF2IMAGE_AVAILABLE and OCR_AVAILABLE:
+            print(f"Low text content detected in {os.path.basename(file_path)}, attempting OCR...")
             try:
-                # Convert PDF to images
-                images = convert_from_path(file_path)
-                ocr_text = ""
-                
-                for i, image in enumerate(images):
-                    # Save image temporarily
-                    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_img:
-                        image.save(tmp_img.name, 'PNG')
+                # Create temp directory for images
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    # Convert PDF to images with higher DPI for better OCR results
+                    images = convert_from_path(
+                        file_path, 
+                        dpi=300,
+                        output_folder=temp_dir,
+                        fmt='png',
+                        thread_count=4
+                    )
+                    ocr_text = ""
+                    
+                    # Configure OCR for better results
+                    custom_config = r'--oem 3 --psm 6 -l eng+osd'
+                    
+                    for i, image in enumerate(images):
+                        image_path = os.path.join(temp_dir, f'page_{i+1}.png')
+                        image.save(image_path, 'PNG')
                         
-                        # Perform OCR
-                        page_text = pytesseract.image_to_string(Image.open(tmp_img.name))
+                        # Try to improve image quality before OCR
+                        img = Image.open(image_path)
+                        # Apply contrast enhancement for clearer text
+                        enhancer = ImageEnhance.Contrast(img)
+                        img = enhancer.enhance(1.5)  # Increase contrast
+                        
+                        # Perform OCR with custom configuration
+                        page_text = pytesseract.image_to_string(img, config=custom_config)
                         ocr_text += f"Page {i+1}:\n{page_text}\n\n"
-                        
-                        # Clean up
-                        os.unlink(tmp_img.name)
                 
-                if len(ocr_text.strip()) > len(text.strip()):
+                if len(ocr_text.strip()) > max(50, len(text.strip())):
                     text = ocr_text
-                    print("OCR extraction successful")
+                    print(f"OCR extraction successful: extracted {len(text)} characters")
                     
             except Exception as e:
-                print(f"OCR failed: {e}")
+                print(f"OCR failed: {str(e)}")
+                # If OCR failed but we have some text from direct extraction, use that
+                if len(text.strip()) < 50:
+                    print("Falling back to minimal text from direct extraction")
                 
     except Exception as e:
-        print(f"PDF processing error: {e}")
+        print(f"PDF processing error: {str(e)}")
         return ""
     
     return text
+
+
 
 def process_docx_file(file_path: str) -> str:
     """Process DOCX files."""
@@ -205,8 +274,3 @@ def process_file(file_path: str, file_type: str) -> List[Dict[str, Any]]:
             processed_data.append(item)
     
     return processed_data
-
-
-
-
-
