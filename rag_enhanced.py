@@ -111,8 +111,25 @@ uploaded_files = st.file_uploader(
 )
 
 # Initialize session state for processed files and chat history
-if "processed_files" not in st.session_state:
+# if "processed_files" not in st.session_state:
+#     st.session_state.processed_files = []
+
+# Clear chat button
+if st.button("🗑️ Clear Chat History"):
+    st.session_state.chat_history = []
+    st.rerun()
+
+# Clear processed files button
+if st.button("🗑️ Clear Processed Files"):
     st.session_state.processed_files = []
+    # Clear ChromaDB collection
+    try:
+        client.delete_collection(name="documents")
+        client.create_collection(name="documents")
+        collection = client.get_collection(name="documents")
+    except:
+        pass
+    st.rerun()
 
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
@@ -165,7 +182,7 @@ if uploaded_files:
                                 ids=[doc_id]
                             )
                         
-                        st.session_state.processed_files.extend(processed_data)
+                        # st.session_state.processed_files.extend(processed_data)
                         st.success(f"✅ Processed {uploaded_file.name} - {len(processed_data)} chunks created and indexed")
                     else:
                         st.warning(f"⚠️ No content extracted from {uploaded_file.name}")
@@ -175,19 +192,22 @@ if uploaded_files:
                 
                 # Clean up temporary file
                 os.unlink(tmp_file_path)
+                
 
-# Display processed files summary
-if st.session_state.processed_files:
-    st.subheader("📊 Processed Files Summary")
-    file_summary = {}
-    for item in st.session_state.processed_files:
-        file_name = item["metadata"]["file_name"]
-        if file_name not in file_summary:
-            file_summary[file_name] = 0
-        file_summary[file_name] += 1
+## Display processed files summary
+# if st.session_state.processed_files:
+#     st.subheader("📊 Processed Files Summary")
+#     file_summary = {}
+#     for item in st.session_state.processed_files:
+#         file_name = item["metadata"]["file_name"]
+#         if file_name not in file_summary:
+#             file_summary[file_name] = 0
+#         file_summary[file_name] += 1
     
-    for file_name, chunk_count in file_summary.items():
-        st.write(f"📄 {file_name}: {chunk_count} chunks")
+#     for file_name, chunk_count in file_summary.items():
+#         st.write(f"📄 {file_name}: {chunk_count} chunks")
+
+
 
 # Chat interface
 st.header("💬 Chat with Your Documents")
@@ -265,22 +285,7 @@ if user_input:
     except Exception as e:
         st.error(f"Error: {str(e)}")
 
-# Clear chat button
-if st.button("🗑️ Clear Chat History"):
-    st.session_state.chat_history = []
-    st.rerun()
 
-# Clear processed files button
-if st.button("🗑️ Clear Processed Files"):
-    st.session_state.processed_files = []
-    # Clear ChromaDB collection
-    try:
-        client.delete_collection(name="documents")
-        client.create_collection(name="documents")
-        collection = client.get_collection(name="documents")
-    except:
-        pass
-    st.rerun()
 
 # Add info about the vector store
 with st.sidebar:
