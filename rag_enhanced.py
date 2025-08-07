@@ -285,7 +285,7 @@ if st.button("🗑️ Clear Processed Files"):
 # Add info about the vector store
 with st.sidebar:
     st.subheader("ℹ️ System Info")
-    st.info("Using ChromaDB with sqlite3 compatibility fix")
+    # st.info("Using ChromaDB with sqlite3 compatibility fix")
     if st.session_state.processed_files:
         total_chunks = len(st.session_state.processed_files)
         st.write(f"📊 Total indexed chunks: {total_chunks}")
