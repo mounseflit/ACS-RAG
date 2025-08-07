@@ -183,7 +183,7 @@ if uploaded_files:
                             )
                         
                         st.session_state.processed_files.extend(processed_data)
-                        st.success(f"✅ Processed {uploaded_file.name} - {len(processed_data)} chunks created and indexed")
+                        # st.success(f"✅ Processed {uploaded_file.name} - {len(processed_data)} chunks created and indexed")
                     else:
                         st.warning(f"⚠️ No content extracted from {uploaded_file.name}")
                         
@@ -192,7 +192,9 @@ if uploaded_files:
                 
                 # Clean up temporary file
                 os.unlink(tmp_file_path)
-                
+
+    # after processing, say that files are ready to go
+    st.success("✅ All files processed successfully! 🎉")
 
 # Display processed files summary
 if st.session_state.processed_files:
