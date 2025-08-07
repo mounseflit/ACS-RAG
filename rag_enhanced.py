@@ -114,23 +114,6 @@ uploaded_files = st.file_uploader(
 if "processed_files" not in st.session_state:
     st.session_state.processed_files = []
 
-# Clear chat button
-if st.button("🗑️ Clear Chat History"):
-    st.session_state.chat_history = []
-    st.rerun()
-
-# Clear processed files button
-if st.button("🗑️ Clear Processed Files"):
-    st.session_state.processed_files = []
-    # Clear ChromaDB collection
-    try:
-        client.delete_collection(name="documents")
-        client.create_collection(name="documents")
-        collection = client.get_collection(name="documents")
-    except:
-        pass
-    st.rerun()
-
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
@@ -195,6 +178,24 @@ if uploaded_files:
 
     # after processing, say that files are ready to go
     st.success("✅ All files processed successfully! 🎉")
+
+# Clear chat button
+if st.button("🗑️ Clear Chat History"):
+    st.session_state.chat_history = []
+    st.rerun()
+
+# Clear processed files button
+if st.button("🗑️ Clear Processed Files"):
+    st.session_state.processed_files = []
+    # Clear ChromaDB collection
+    try:
+        client.delete_collection(name="documents")
+        client.create_collection(name="documents")
+        collection = client.get_collection(name="documents")
+    except:
+        pass
+    st.rerun()
+
 
 # Display processed files summary
 if st.session_state.processed_files:
