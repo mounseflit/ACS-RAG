@@ -3,9 +3,9 @@
 
 ## 1. Overview
 
-A comprehensive Retrieval-Augmented Generation (RAG) system built with Streamlit and Python that integrates with IBM Watsonx AI. This system allows users to upload various file types and chat with the content using natural language.
+A comprehensive Retrieval-Augmented Generation (RAG) system built with Streamlit and Python that integrates with ACS AI. This system allows users to upload various file types and chat with the content using natural language.
 
-This document outlines the proposed architecture for a Retrieval-Augmented Generation (RAG) system that integrates with IBM Watsonx AI. The system will enable users to upload various file types, extract relevant information, and engage in a conversational chat with the content. The core idea is to leverage Watsonx AI's capabilities for natural language understanding, foundation models, and potentially specialized services like Watson Discovery for document processing.
+This document outlines the proposed architecture for a Retrieval-Augmented Generation (RAG) system that integrates with ACS AI. The system will enable users to upload various file types, extract relevant information, and engage in a conversational chat with the content. The core idea is to leverage ACS AI's capabilities for natural language understanding, foundation models, and potentially specialized services like Watson Discovery for document processing.
 
 ## 2. High-Level Architecture
 
@@ -13,10 +13,10 @@ The RAG system will consist of the following main components:
 
 1.  **User Interface (UI)**: A Streamlit-based web application for user interaction, including file upload (drag-and-drop) and a chat interface.
 2.  **File Ingestion and Preprocessing Module**: Responsible for handling various file types, extracting raw content, and converting it into a standardized format suitable for further processing.
-3.  **Content Processing and Embedding Module**: This module will process the extracted content, perform necessary transformations (e.g., OCR), chunk the data, and generate embeddings using Watsonx AI's embedding models.
+3.  **Content Processing and Embedding Module**: This module will process the extracted content, perform necessary transformations (e.g., OCR), chunk the data, and generate embeddings using ACS AI's embedding models.
 4.  **Vector Database/Knowledge Base**: A storage solution for the generated embeddings and associated metadata, enabling efficient retrieval of relevant information.
-5.  **Retrieval-Augmented Generation (RAG) Orchestrator**: This component will manage the flow of information, including retrieving relevant context from the knowledge base based on user queries and feeding it to the Watsonx AI foundation model for generating responses.
-6.  **Watsonx AI Integration**: Leveraging various Watsonx AI services for core functionalities like foundation models (LLMs), embedding generation, and potentially specialized services for document understanding.
+5.  **Retrieval-Augmented Generation (RAG) Orchestrator**: This component will manage the flow of information, including retrieving relevant context from the knowledge base based on user queries and feeding it to the ACS AI foundation model for generating responses.
+6.  **ACS AI Integration**: Leveraging various ACS AI services for core functionalities like foundation models (LLMs), embedding generation, and potentially specialized services for document understanding.
 
 ```mermaid
 graph TD
@@ -25,7 +25,7 @@ graph TD
     C --> D[Vector Database/Knowledge Base]
     A --> E{RAG Orchestrator}
     E --> D
-    E --> F[Watsonx AI Foundation Model]
+    E --> F[ACS AI Foundation Model]
     F --> A
     C --> F
 ```
@@ -39,9 +39,9 @@ The system needs to handle a diverse set of file types. The file processing pipe
 *   **Text Files (.txt, .md, .doc, .docx)**: Direct text extraction. For `.doc` and `.docx`, libraries like `python-docx` or `pandoc` will be considered.
 *   **PDF Files (.pdf)**:
     *   **Text-based PDFs**: Direct text extraction using libraries like `PyPDF2` or `pdfminer.six`.
-    *   **Scanned PDFs (Image-based PDFs)**: OCR (Optical Character Recognition) will be applied to extract text. IBM Watsonx AI's capabilities or external OCR libraries (e.g., `Tesseract` via `pytesseract`) will be evaluated.
+    *   **Scanned PDFs (Image-based PDFs)**: OCR (Optical Character Recognition) will be applied to extract text. ACS AI's capabilities or external OCR libraries (e.g., `Tesseract` via `pytesseract`) will be evaluated.
 *   **Spreadsheet Files (.xls, .xlsx)**: Data extraction from sheets into a structured format (e.g., Pandas DataFrames) using libraries like `pandas` and `openpyxl`.
-*   **Image Files (.jpg, .png, etc.)**: OCR will be applied to extract any text present in the images. Image description or captioning models (potentially from Watsonx AI vision models) could be explored for richer context.
+*   **Image Files (.jpg, .png, etc.)**: OCR will be applied to extract any text present in the images. Image description or captioning models (potentially from ACS AI vision models) could be explored for richer context.
 
 
 ### 3.2. Common Processing Steps
@@ -51,14 +51,14 @@ After initial content extraction, all data will undergo common processing steps:
 1.  **Cleaning and Normalization**: Removing irrelevant characters, formatting inconsistencies, and standardizing text.
 2.  **Chunking**: Breaking down large documents or extracted text into smaller, manageable chunks. This is crucial for RAG systems to ensure that the retrieved context fits within the LLM's token limit and is relevant to the query.
 3.  **Metadata Extraction**: Extracting relevant metadata (e.g., file name, creation date, author, section titles) to enrich the chunks and aid in retrieval.
-4.  **Embedding Generation**: Converting text chunks into numerical vector embeddings using a Watsonx AI embedding model (e.g., `/ml/v1/text/embeddings` API endpoint).
+4.  **Embedding Generation**: Converting text chunks into numerical vector embeddings using a ACS AI embedding model (e.g., `/ml/v1/text/embeddings` API endpoint).
 
-## 4. Watsonx AI Integration Points
+## 4. ACS AI Integration Points
 
 *   **Foundation Models (LLMs)**: For generating conversational responses based on retrieved context and user queries.
 *   **Embedding Models**: For creating vector representations of text chunks and user queries.
 *   **Watson Discovery (Potential)**: For advanced document understanding, smart document segmentation, and potentially managing the knowledge base for complex document types.
-*   **Watsonx AI Vision Models (Potential)**: For image-to-text transcription (OCR) and potentially image understanding for richer context from images.
+*   **ACS AI Vision Models (Potential)**: For image-to-text transcription (OCR) and potentially image understanding for richer context from images.
 
 ## 5. Data Flow for a User Query
 
@@ -66,9 +66,9 @@ After initial content extraction, all data will undergo common processing steps:
 2.  Files are processed through the ingestion and preprocessing pipeline.
 3.  Processed chunks and their embeddings are stored in the Vector Database.
 4.  User enters a query in the Streamlit chat interface.
-5.  The query is embedded using the Watsonx AI embedding model.
+5.  The query is embedded using the ACS AI embedding model.
 6.  The RAG Orchestrator retrieves top-k most similar chunks from the Vector Database based on the query embedding.
-7.  The retrieved chunks, along with the user's query, are sent to the Watsonx AI foundation model as context.
+7.  The retrieved chunks, along with the user's query, are sent to the ACS AI foundation model as context.
 8.  The foundation model generates a response.
 9.  The response is displayed in the Streamlit chat interface.
 
@@ -78,7 +78,7 @@ After initial content extraction, all data will undergo common processing steps:
 *   **Scalability**: The architecture should consider future scalability, especially for handling large volumes of data and concurrent users.
 *   **Security**: API keys and sensitive information will be handled securely (e.g., using Streamlit secrets).
 *   **Performance**: Optimization of file processing and retrieval will be crucial for a responsive user experience.
-*   **Specific Watsonx AI APIs**: Further investigation into the exact Watsonx AI APIs for each processing step (e.g., OCR for scanned images, specific embedding models) will be required during implementation.
+*   **Specific ACS AI APIs**: Further investigation into the exact ACS AI APIs for each processing step (e.g., OCR for scanned images, specific embedding models) will be required during implementation.
 
 This design provides a solid foundation for building the RAG system. The next phase will involve implementing the file processing modules based on this architecture.
 
@@ -96,7 +96,7 @@ This design provides a solid foundation for building the RAG system. The next ph
 - **Multi-Modal Processing**: Handles text, images, audio, and documents
 - **OCR Support**: Extracts text from scanned PDFs and images
 - **Vector Database**: Uses ChromaDB for efficient document retrieval
-- **RAG Integration**: Leverages Watsonx AI for intelligent responses
+- **RAG Integration**: Leverages ACS AI for intelligent responses
 - **Chat Interface**: Interactive conversation with your documents
 
 ## Architecture
@@ -120,7 +120,7 @@ The system consists of several key components:
    - Chat interface
    - Settings management
 
-4. **Watsonx AI Integration**
+4. **ACS AI Integration**
    - Foundation models for text generation
    - Embedding generation (placeholder implementation)
 
@@ -128,13 +128,13 @@ The system consists of several key components:
 
 ### Prerequisites
 - Python 3.11+
-- IBM Watsonx AI account and API credentials
+- ACS AI account and API credentials
 
 ### Required Packages
 ```bash
 pip install streamlit
-pip install ibm-watsonx-ai
-pip install ibm-watson
+pip install-ACS-ai
+pip install-watson
 pip install chromadb
 pip install pypdf
 pip install python-docx
@@ -164,9 +164,9 @@ streamlit run rag_enhanced.py --server.port 8505 --server.address 0.0.0.0
 
 ### 2. Configure Settings
 In the sidebar, provide:
-- **Watsonx AI API Key**: Your IBM Watsonx AI API key
-- **Project ID**: Your Watsonx AI project ID
-- **Endpoint URL**: Watsonx AI service endpoint
+- **ACS AI API Key**: Your ACS AI API key
+- **Project ID**: Your ACS AI project ID
+- **Endpoint URL**: ACS AI service endpoint
 - **Model Selection**: Choose from available foundation models
 
 ### 3. Upload Files
@@ -200,26 +200,19 @@ In the sidebar, provide:
 
 ## Configuration
 
-### Environment Variables
-You can set the following environment variables or use Streamlit secrets:
-- `WATSONX_API_KEY`: Your Watsonx AI API key
-- `WATSONX_PROJECT_ID`: Your project ID
-- `WATSONX_URL`: Service endpoint URL
-
 ### Streamlit Secrets
 Create `.streamlit/secrets.toml`:
 ```toml
 project_id = "your-project-id"
-url = "your-watsonx-endpoint"
+url = "your-ACS-endpoint"
 ```
 
 ## API Integration
 
-### Watsonx AI Foundation Models
+### ACS AI Foundation Models
 The system supports various foundation models:
-- **IBM Granite**: Text and code models
+- * Granite**: Text and code models
 - **Meta LLaMA**: Various sizes and capabilities
-- **Google**: Flan-T5 models
 - **Mistral**: Large language models
 
 ## Performance Optimization
@@ -255,7 +248,7 @@ The system supports various foundation models:
    - Install poppler-utils: `sudo apt-get install poppler-utils`
    - Check PDF file permissions
 
-5. **Watsonx AI Connection Issues**
+5. **ACS AI Connection Issues**
    - Verify API credentials
    - Check endpoint URL format
    - Ensure project ID is correct
@@ -273,8 +266,9 @@ The system includes comprehensive error handling:
 ├── rag_enhanced.py          # Main Streamlit application
 ├── file_processor.py        # File processing utilities
 ├── system_architecture.md   # Architecture documentation
-├── README.md               # This file
-└── todo.md                 # Development progress
+├── requirements.txt         # Required Packages
+├── packages.txt             # System Dependencies
+└── README.md                # This file
 ```
 
 ### Testing
@@ -288,7 +282,7 @@ Test the system with various file types:
 - Add support for new file formats in `file_processor.py`
 - Implement custom embedding models
 - Add more sophisticated retrieval algorithms
-- Integrate additional Watsonx AI services
+- Integrate additional ACS AI services
 
 ## Security Considerations
 
@@ -305,7 +299,7 @@ Test the system with various file types:
 
 ## Future Enhancements
 
-- Implement proper Watsonx AI embedding API integration
+- Implement proper ACS AI embedding API integration
 - Add support for more file formats
 - Persistent vector database storage
 - Advanced retrieval algorithms
