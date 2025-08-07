@@ -38,7 +38,7 @@ with st.sidebar:
     st.header("🔧 Settings")
     
     # Try to get credentials from secrets first, otherwise use input fields
-    api_key = st.text_input("Watsonx AI API Key *", type="password")
+    api_key = st.text_input("ACS AI API Key *", type="password")
     try:
         project_id = st.secrets.get("project_id", "") or st.text_input("Project ID *")
         url = st.secrets.get("url", "") or st.text_input("Endpoint URL *")
