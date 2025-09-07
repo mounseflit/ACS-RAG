@@ -4,6 +4,7 @@ import os
 import json
 import tempfile
 
+
 # Fix for sqlite3 version issue with ChromaDB
 try:
     import pysqlite3
@@ -276,6 +277,7 @@ if user_input:
 
     except Exception as e:
         st.error(f"Error: {str(e)}")
+
 
 
 
